@@ -1,0 +1,12 @@
+---
+- name: Install git package
+  hosts: all
+  remote_user:  satyanarayana.manne
+  become: True
+  become_method: su
+  become_flags: "-"
+  vars:
+
+  tasks:
+  - name: install git
+    yum: name=git
