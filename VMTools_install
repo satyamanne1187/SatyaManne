@@ -1,0 +1,29 @@
+
+---
+- hosts: build
+  remote_user: patel
+  become: yes
+  vars:
+
+  tasks:
+
+  - name: Creates directory
+    file:
+      path: /tmp/vmtool
+      state: directory
+
+  - copy:
+      src: /home/depot/VMTools/vmtool_10.1.7.tar
+      dest: /tmp/vmtool/vmtool_10.1.7.tar
+
+  - unarchive:
+      src: /home/depot/VMTools/vmtool_10.1.7.tar
+      dest: /tmp/vmtool
+      remote_src: True
+
+  - shell: /tmp/vmtool/vmware-install.pl -d
+
+  - name: Creates directory
+    file:
+      path: /tmp/vmtool
+      state: absent
