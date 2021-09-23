@@ -1,0 +1,18 @@
+
+Pre_Check: 
+pssh -h /home/satyanarayana.manne/SPLUNK/splunk/servs1.txt -l satyanarayana.manne -Av -i 'sudo su - -c "uptime ;/opt/splunkforwarder/bin/splunk version"' 
+ 
+Copy_Pkgs: 
+ 
+# pscp.pssh -h /home/satyanarayana.manne/SPLUNK/splunk/servs1.txt -l satyanarayana.manne -Av /satyanarayana.manne/SPLUNK/splunk/upgrade_splunk1.sh /tmp/ 
+ 
+#pscp.pssh -h /home/satyanarayana.manne/SPLUNK/splunk/servs1.txt -l satyanarayana.manne -Av /home/satyanarayana.manne/SPLUNK/splunk/splunkforwarder-8.1.2-545206cc9f70-linux-2.6-x86_64.rpm /tmp/ 
+ 
+Execute Script: 
+ 
+pssh -h /home/satyanarayana.manne/SPLUNK/splunk/servs1.txt -l satyanarayana.manne -Av -i 'sudo su - -c "sh /tmp/upgrade_splunk1.sh"' 
+ 
+ pscp.pssh -h /home/satyanarayana.manne/SPLUNK/splunk/Stage_list.txt -l satyanarayana.manne -Av /satyanarayana.manne/SPLUNK/splunk/upgrade_splunk1.sh /tmp/
+ 
+cat Dev_Post_Report.txt |grep -i Forwarder 
+ 
