@@ -1,0 +1,350 @@
+
+---
+- hosts: build
+  become: yes
+  vars:
+       password: "$6$WGyl8LDF$0ckWu/uefVsNdaH6aWKa.Y3VyGUwH57MDSUakUOYDULF2FTFrme8iZrFirrBCSP0ZHv/6nz5nnA0ryN7E71Ol1"
+       secmgmt_pwd: "$6$DNO0VAvD$vTgrxr9/TEIP..xsAuCrpyzz0MTjL169Qd9Ue6Jw5Z3KQoyTgwNPub9ta4wPhOFSOXe/yNNNJJGJ91qbOQDd91"
+
+  tasks:
+
+  - name: Add User Patel
+    user: name=patel shell=/bin/bash home=/home/patel comment="Mike Patel, System Engineering - Linux, 219-3771"  password={{password}} groups=wheel
+
+  - name: Add User Vincent
+    user: name=vincent shell=/bin/bash home=/home/vincent  comment="Randy Vincent,System Engineering - Linux,219-7927" password={{password}} groups=wheel
+
+  - name: Add User Proctor
+    user: name=proctor shell=/bin/bash home=/home/proctor  comment="Bryan Proctor,System Engineering - Linux,420-6771" password={{password}} groups=wheel
+
+  - name: Creates Vincent ssh directory
+    file: path=/home/vincent/.ssh state=directory owner=vincent group=vincent mode=0700
+
+  - name: Creates Patel ssh directory
+    file: path=/home/patel/.ssh state=directory owner=patel group=patel mode=0700
+
+  - name: Creates Proctor ssh directory
+    file: path=/home/proctor/.ssh state=directory owner=proctor group=proctor mode=0700
+
+
+  - name:  Copy Vincent authorized keys
+    copy: src=/home/depot/ssh/vincent_authorized_keys dest=/home/vincent/.ssh/authorized_keys group=vincent owner=vincent mode=0700
+
+  - name:  Copy Patel authorized keys
+    copy: src=/home/depot/ssh/patel_authorized_keys dest=/home/patel/.ssh/authorized_keys group=patel owner=patel mode=0700
+
+  - name:  Copy Proctor authorized keys
+    copy: src=/home/depot/ssh/proctor_authorized_keys dest=/home/proctor/.ssh/authorized_keys group=proctor owner=proctor mode=0700
+
+
+  - name:  Add PLSA User
+    user: name=plsa shell=/bin/bash home=/home/plsa  comment="PacificLife Linux SysAdmin"
+
+  - name:  Create PLSA ssh directory
+    file: path=/home/plsa/.ssh state=directory owner=plsa group=plsa mode=0700
+
+  - name:  Copy PLSA authorizedkeys
+    copy: src=/home/depot/PLSA/authorized_keys dest=/home/plsa/.ssh/authorized_keys  group=plsa owner=plsa mode=0700
+
+  - name:  Copy PLSA sudo file
+    copy: src=/home/depot/PLSA/plsa_sudo       dest=/etc/sudoers.d/plsa_sudo
+
+
+  - name:  Add SECMGMT User
+    user: name=secmgmt shell=/bin/bash home=/home/secmgmt comment="ITS Security Management, Qualys Scan" password={{secmgmt_pwd}}
+
+  - name:  Copy SECMGMT sudo file
+    copy: src=/home/depot/Qualys/secmgmt_sudo  dest=/etc/sudoers.d/secmgmt_sudo
+
+  - name:   Copy SSHD Banneer
+    copy: src=/home/depot/ssh/sshd_banner dest=/etc/ssh/sshd_banner owner=root group=root mode=0644
+
+  - shell: sed -i 's:#Banner none:Banner /etc/ssh/sshd_banner:g' /etc/ssh/sshd_config
+
+  - name:  Start NTP Service
+    service: name=ntpd        enabled=true
+
+  - name:  Deactivate IPTABLES Service
+    service: name=iptables    enabled=false
+
+  - name:  Deactivate IP6TABLES Service
+    service: name=ip6tables   enabled=false
+
+  - name:  Stop IPTABLES Service
+    service: name=iptables    state=stopped
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:  Stop IP6TABLES Service
+    service: name=ip6tables   state=stopped
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:  Stop IP6TABLES Service
+    service: name=firewalld   state=stopped
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:  Comment Out First Server in ntp.conf
+    shell: sed -i 's:server 0.rhel.pool.ntp.org iburst:#server 0.rhel.pool.ntp.org iburst:g' /etc/ntp.conf
+  - name:  Comment Out Second Server in ntp.conf
+    shell: sed -i 's:server 1.rhel.pool.ntp.org iburst:#server 1.rhel.pool.ntp.org iburst:g' /etc/ntp.conf
+
+  - name:  Update NTP for Newport Beach Primary Server
+    shell: sed -i 's:server 2.rhel.pool.ntp.org iburst:server 10.250.1.61:g'  /etc/ntp.conf
+    when: inventory_hostname | search("10")
+
+  - name:  Update NTP for Newport Beach Secondary Server
+    shell: sed -i 's:server 3.rhel.pool.ntp.org iburst:server 10.250.1.62:g'  /etc/ntp.conf
+    when: inventory_hostname | search("10")
+
+  - name:  Update NTP for Aliso Viejo Primary Server
+    shell: sed -i 's:server 2.rhel.pool.ntp.org iburst:server 10.254.100.21:g'  /etc/ntp.conf
+    when: inventory_hostname | search("20")
+
+  - name:  Update NTP for Aliso Viejo Secondary Server
+    shell: sed -i 's:server 3.rhel.pool.ntp.org iburst:server 10.254.100.22:g'  /etc/ntp.conf
+    when: inventory_hostname | search("20")
+
+  - name:  Update NTP for Lynchburg Primary Server
+    shell: sed -i 's:server 2.rhel.pool.ntp.org iburst:server 10.249.0.21:g'  /etc/ntp.conf
+    when: inventory_hostname | search("50")
+
+  - name:  Update NTP for Lynchburg Secondary Server
+    shell: sed -i 's:server 3.rhel.pool.ntp.org iburst:server 10.246.0.22:g'  /etc/ntp.conf
+    when: inventory_hostname | search("50")
+
+  - name:  Update NTP for Omaha Primary Server
+    shell: sed -i 's:server 2.rhel.pool.ntp.org iburst:server 10.252.4.21:g'  /etc/ntp.conf
+    when: inventory_hostname | search("90*")
+
+  - name:  Update NTP for Omaha Secondary Server
+    shell: sed -i 's:server 3.rhel.pool.ntp.org iburst:server 10.250.1.61:g'  /etc/ntp.conf
+    when: inventory_hostname | search("90*")
+
+  - name:  Install Net SNMMP Package
+    yum: name=net-snmp        state=present
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+#  - name:  Install Katello Packages
+#    yum: name=katello-agent   state=present
+
+
+  - name:  Update NTP for Omaha Secondary Server
+    shell: sed -i 's:server 3.rhel.pool.ntp.org iburst:server 10.250.1.61:g'  /etc/ntp.conf
+
+  - name: Add Remember to system-auth
+    replace: dest="/etc/pam.d/system-auth" backup=yes regexp="try_first_pass use_authtok" replace="try_first_pass use_authtok remember=5"
+
+  - name:  Copy ILMT RPM
+    copy: src=/home/depot/ILMT/BESAgent-9.0.835.0-rhe5.x86_64.rpm dest=/tmp owner=root group=root
+
+  - name:  Copy ILMT Install Script
+    copy: src=/home/depot/ILMT/agent-install.sh dest=/tmp owner=root group=root mode=0700
+
+  - name:  Run ILMT Install Script
+    shell: /tmp/agent-install.sh
+
+  - name:  Remove ILMT Install Script
+    file:  path=/tmp/agent-install.sh state=absent
+
+  - name:  Disable ctl-alt-del for RHEL6
+    shell: cp -v /etc/init/control-alt-delete.conf /etc/init/control-alt-delete.override
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:  Disable ctl-alt-del for RHEL6
+    shell: sed -i 's,^exec.*,exec /usr/bin/logger -p authpriv.notice -t init "Ctrl-Alt-Del was pressed and ignored",'  /etc/init/control-alt-delete.conf
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:  Disable ctl-alt-del for RHEL7
+    shell: systemctl mask ctrl-alt-del.target
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name: Set Variable for Virtual Machine Check
+    shell: /usr/sbin/dmidecode -s system-manufacturer
+    register: sys_var
+
+  - name: Add Remember to system-auth
+    replace: dest="/etc/pam.d/system-auth" backup=yes regexp="try_first_pass use_authtok" replace="try_first_pass use_authtok remember=5"
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name: Creates directory
+    file: path=/tmp/vmtool state=directory
+    when: sys_var.stdout.find('VMware') != -1
+
+  - name: Copy VM Tools RPM Tar File
+    copy: src=/home/depot/VMTools/vmtool_10.1.7.tar dest=/tmp/vmtool/vmtool_10.1.7.tar
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6" and sys_var.stdout.find('VMware') != -1)
+
+  - name: Extracat VM Tools RPM
+    unarchive: src=/home/depot/VMTools/vmtool_10.1.7.tar dest=/tmp/vmtool remote_src=True
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6" and sys_var.stdout.find('VMware') != -1)
+#    when: sys_var.stdout.find('VMware') != -1
+
+  - name: Install VM Tools
+    shell: /tmp/vmtool/vmware-install.pl -d
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6" and sys_var.stdout.find('VMware') != -1)
+#    when: sys_var.stdout.find('VMware') != -1
+
+  - name: Creates directory
+    file: path=/tmp/vmtool   state=absent
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6" and sys_var.stdout.find('VMware') != -1)
+#    when: sys_var.stdout.find('VMware') != -1
+
+
+  - name:  Install VM Tools RHEL 7
+    yum: name=open-vm-tools        state=present
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name: Enable  VM Tools REHL 7
+    shell: systemctl enable vmtoolsd.service
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7" and sys_var.stdout.find('VMware') != -1)
+
+  - name: Start  VM Tools REHL 7
+    shell: systemctl start vmtoolsd.service
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7" and sys_var.stdout.find('VMware') != -1)
+
+
+  - user: name=zabbix shell=/bin/bash home=/home/zabbix  comment="Zabbix User t,System Engineering - Linux" password={{password}}
+
+  - name: Creates Zabbix Config directory
+    file:
+      path: /home/zabbix/zabbix_agentd.d
+      state: directory
+      owner: zabbix
+      group: zabbix
+
+ - name: Creates Zabbix Scripts directory
+    file:
+      path: /home/zabbix/scripts
+      state: directory
+      owner: zabbix
+      group: zabbix
+
+
+  - name:  Copy Zabbix Script Files
+    copy:
+      src: /home/depot/Zabbix/scripts/
+      dest: /home/zabbix/scripts/
+      group: zabbix
+      owner: zabbix
+
+  - name:  Copy Zabbix Agent Files
+    copy:
+      src: /home/depot/Zabbix/zabbix_agentd.d/
+      dest: /home/zabbix/zabbix_agentd.d/
+      group: zabbix
+      owner: zabbix
+
+  - name:   Copy Zabbix RPM - RHEL6
+    copy: src=/home/depot/Zabbix/zabbix-agent-3.2.7-1.el6.x86_64.rpm dest=/tmp owner=root group=root
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:   Install Zabbix  - RHEL6
+    yum: name=/tmp/zabbix-agent-3.2.7-1.el6.x86_64.rpm state=present
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:   Copy Zabbix RPM - RHEL7
+    copy: src=/home/depot/Zabbix/zabbix-agent-3.2.11-1.el7.x86_64.rpm dest=/tmp owner=root group=root
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:   Install Zabbix  - RHEL7
+    yum: name=/tmp/zabbix-agent-3.2.11-1.el7.x86_64.rpm state=present
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:  Copy Zabbix Config File
+    copy:
+      src: /home/depot/Zabbix/zabbix_agentd.conf
+      dest: /etc/zabbix/zabbix_agentd.conf
+      group: zabbix
+      owner: zabbix
+
+  - name:  Update Server Name
+    shell: sed -i 's:Hostname=:Hostname={{ansible_hostname}}:g'  /etc/zabbix/zabbix_agentd.conf
+
+  - name:  Copy Zabbix Config File
+    copy:
+      src: /home/depot/Zabbix/zabbix_agentd.d/
+      dest: /home/zabbix/zabbix_agentd.d/
+      group: zabbix
+      owner: zabbix
+
+
+  - name:  Configure Zabbix Run Level - RHEL6
+    shell: /sbin/chkconfig --level 345 zabbix-agent on
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:  Start Zabbix  - RHEL6
+    shell: /sbin/service zabbix-agent start
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:  Remove RPM  - RHEL6
+    shell: rm /tmp/zabbix-agent-3.2.7-1.el6.x86_64.rpm
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:  Configure Zabbix Run Level - RHEL7
+    shell: /bin/systemctl enable zabbix-agent
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:  Start Zabbix  - RHEL7
+    shell: /bin/systemctl start zabbix-agent
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:  Remove RPM  - RHEL7
+    shell: rm /tmp/zabbix-agent-3.2.11-1.el7.x86_64.rpm
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:   Copy CROWDSTRIKE RPM for RHEL6
+    copy: src=/home/depot/CROWDSTRIKE/V6/falcon-sensor-3.3.0-3302.el6.x86_64.rpm dest=/tmp owner=root group=root
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:   Copy CROWDSTRIKE Script for RHEL6
+    copy: src=/home/depot/CROWDSTRIKE/PLAYBOOKS/crowdstrike-k6-steps.sh          dest=/tmp owner=root group=root mode=0700
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:   Install CROWDSTRIKE for RHEL6
+    yum: name=/tmp/falcon-sensor-3.3.0-3302.el6.x86_64.rpm    state=present
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:   Copy CROWDSTRIKE RPM for RHEL7
+    copy: src=/home/depot/CROWDSTRIKE/V7/falcon-sensor-3.3.0-3302.el7.x86_64.rpm dest=/tmp owner=root group=root
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:   Copy CROWDSTRIKE Script for RHEL7
+    copy: src=/home/depot/CROWDSTRIKE/PLAYBOOKS/crowdstrike-k7-steps.sh          dest=/tmp owner=root group=root mode=0700
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:   Install CROWDSTRIKE for RHEL7
+    yum: name=/tmp/falcon-sensor-3.3.0-3302.el7.x86_64.rpm    state=present
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:   Pause for  CROWDSTRIKE Agent to start
+    pause:
+     seconds: 30
+
+#
+#    Run Crowdstrike config script. Pause is to allow time for process to start.
+#
+
+  - name:   Run CROWDSTRIKE Script for RHEL6
+    shell: /tmp/crowdstrike-k6-steps.sh
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:   Run CROWDSTRIKE Script for RHEL7
+    shell: /tmp/crowdstrike-k7-steps.sh
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:   Remove CROWDSTRIKE Script for RHEL6
+    file: path=/tmp/crowdstrike-k6-steps.sh state=absent
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:   Remove CROWDSTRIKE Script for RHEL7
+    file: path=/tmp/crowdstrike-k7-steps.sh  state=absent
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - name:   Remove CROWDSTRIKE RPM for RHEL6
+    file: path=/tmp/falcon-sensor-3.3.0-3302.el6.x86_64.rpm state=absent
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "6")
+
+  - name:   Remove CROWDSTRIKE RPM for RHEL7
+    file: path=/tmp/falcon-sensor-3.3.0-3302.el7.x86_64.rpm  state=absent
+    when: (ansible_distribution == "RedHat" and ansible_distribution_major_version == "7")
+
+  - shell: netstat -tapn | grep falcon
