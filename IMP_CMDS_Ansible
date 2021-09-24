@@ -1,0 +1,7 @@
+
+ansible all -i plsa_list -a 'sudo su - -c "useradd depot"'
+
+ansible all -i plsa_list -a 'sudo su - -c "passwd depot <<EOF
+Paclife@098
+Paclife@098
+EOF"'
