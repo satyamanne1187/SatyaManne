@@ -1,0 +1,4 @@
+#pssh -h tst_lst -l satyanarayana.manne -Av -i 'sudo su - -c "passwd plsa <<EOF 
+Paclife@098
+Paclife@098
+EOF"
